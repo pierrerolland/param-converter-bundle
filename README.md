@@ -57,4 +57,4 @@ class AppKernel extends Kernel
 
 ## Converters
 
-1. Doctrine entity param converter
+[1. Doctrine entity param converter](Resources/doc/doctrine_entity.md)

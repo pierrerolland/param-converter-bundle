@@ -1,0 +1,22 @@
+services:
+    rolland_rock_param_converter.builder.entity:
+        class: RollandRock\ParamConverterBundle\Builder\EntityBuilder
+        arguments:
+            - "@doctrine.orm.entity_manager"
+            - "@property_accessor"
+            - "@rolland_rock_param_converter.finder.request"
+            - "@logger"
+        public: false
+
+    rolland_rock_param_converter.finder.request:
+        class: RollandRock\ParamConverterBundle\Finder\RequestFinder
+        public: false
+
+    rolland_rock_param_converter.param_converter.entity:
+        class: RollandRock\ParamConverterBundle\ParamConverter\EntityParamConverter
+        arguments:
+            - "@rolland_rock_param_converter.builder.entity"
+            - "@doctrine.orm.entity_manager"
+            - "@rolland_rock_param_converter.finder.request"
+        tags:
+            - { name: request.param_converter, converter: rollandrock_entity_converter }

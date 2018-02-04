@@ -1,0 +1,28 @@
+{
+  "name": "rollandrock/param-converter-bundle",
+  "type": "symfony-bundle",
+  "description": "This bundle aims to provide useful param converters",
+  "keywords": ["param", "converter", "symfony", "bundle", "entity"],
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Pierre Rolland",
+      "email": "roll.pierre@gmail.com"
+    }
+  ],
+  "require": {
+    "php": ">5.5",
+    "symfony/framework-bundle": "~2.1|~3.0|~4.0",
+    "sensio/framework-extra-bundle": "~2.0|~3.0|~4.0|~5.0",
+    "doctrine/orm": "*"
+  },
+  "autoload": {
+    "psr-4": { "RollandRock\\ParamConverterBundle\\": "" },
+    "exclude-from-classmap": [
+      "/Tests/"
+    ]
+  },
+  "autoload-dev": {
+    "psr-4": { "RollandRock\\ParamConverterBundle\\Tests\\": "Tests" }
+  }
+}

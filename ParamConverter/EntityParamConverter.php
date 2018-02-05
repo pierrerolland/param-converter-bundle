@@ -43,11 +43,19 @@ class EntityParamConverter implements ParamConverterInterface
      */
     function apply(Request $request, ParamConverter $configuration)
     {
-        $id = $this->requestFinder->find('id', $request);
         $class = $configuration->getClass();
+        $identifiers = $this->entityManager->getClassMetadata($class)->getIdentifierFieldNames();
 
-        if ($id) {
-            $entity = $this->entityManager->getRepository($configuration->getClass())->find($id);
+        $search = [];
+        foreach ($identifiers as $identifier) {
+            $value = $this->requestFinder->find($identifier, $request);
+            if ($value !== null) {
+                $search[$identifier] = $value;
+            }
+        }
+
+        if (count($search) === count($identifiers)) {
+            $entity = $this->entityManager->getRepository($configuration->getClass())->findBy($search);
             if (!$entity) {
                 $entity = new $class();
             }

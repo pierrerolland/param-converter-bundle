@@ -151,8 +151,17 @@ class EntityBuilder
     private function retrieveAssociationValue($fromClass, $targetClass, array $requestValues)
     {
         $repo = $this->entityManager->getRepository($targetClass);
-        if (isset($requestValues['id'])) {
-            $value = $repo->find($requestValues['id']);
+        $targetClassMetadata = $this->entityManager->getClassMetadata($targetClass);
+        $identifiers = $targetClassMetadata->getIdentifierFieldNames();
+
+        $search = [];
+        foreach ($identifiers as $identifier) {
+            if (isset($requestValues[$identifier])) {
+                $search[$identifier] = $requestValues[$identifier];
+            }
+        }
+        if (count($search) === count($identifiers)) {
+            $value = $repo->findBy($search);
             if (!$value) {
                 $value = new $targetClass();
             }
@@ -187,11 +196,13 @@ class EntityBuilder
         $entityValues = $this->removeItemsNotInRequest($entityValues, $requestValues);
         $collection = is_array($entityValues) ? [] : new ArrayCollection();
 
+        $identifiers = is_array($entityValues) && count($entityValues) > 0 ?
+            $this->entityManager->getClassMetadata(current($entityValues))->getIdentifierFieldNames() : [];
         foreach ($requestValues as $requestValue) {
-            if ($entityValues && isset($requestValue['id'])) {
+            if ($entityValues && $this->requestValuesHaveIdentifiers($requestValues, $identifiers)) {
                 foreach ($entityValues as $entityValue) {
-                    if (method_exists($entityValue, 'getId')) {
-                        if ($entityValue->getId() == $requestValue['id']) {
+                    if ($this->objectHasIdentifiersGetters($entity, $identifiers)) {
+                        if ($this->objectIdentifiersMatchRequest($entityValue, $requestValue, $identifiers)) {
                             $this->buildEntity($entityValue, $this->getNewRequest($requestValue), $fromClass);
                             if ($isInverseSide && $mappedBy) {
                                 $this->propertyAccessor->setValue($entityValue, $mappedBy, $entity);
@@ -223,13 +234,25 @@ class EntityBuilder
         if (!$entityValues) {
             return null;
         }
+
+        $entityClass = $entityValues instanceof Collection ? get_class($entityValues->current()) :
+            is_array($entityValues) ? get_class(current($entityValues)) : null;
+
+        if (!$entityClass) {
+            return null;
+        }
+
+        $identifiers = $this->entityManager->getClassMetadata($entityClass)->getIdentifierFieldNames();
+
         foreach ($entityValues as $id => $entityValue) {
-            if (!method_exists($entityValue, 'getId')) {
+            if (!$this->objectHasIdentifiersGetters($entityValue, $identifiers)) {
                 return;
             }
-            $entityValueId = $entityValue->getId();
             foreach ($requestValues as $requestValue) {
-                if (isset($requestValue['id']) && $requestValue['id'] == $entityValueId) {
+                if (
+                    $this->requestValuesHaveIdentifiers($requestValue, $identifiers) &&
+                    $this->objectIdentifiersMatchRequest($entityValue, $requestValue, $identifiers)
+                ) {
                     continue 2;
                 }
             }
@@ -252,5 +275,57 @@ class EntityBuilder
     private function getNewRequest($values)
     {
         return new Request([], [], [], [], [], [], json_encode($values));
+    }
+
+    /**
+     * @param array $requestValues
+     * @param array $identifiers
+     *
+     * @return bool
+     */
+    private function requestValuesHaveIdentifiers(array $requestValues, array $identifiers)
+    {
+        foreach ($identifiers as $identifier) {
+            if (!isset($requestValues[$identifier])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param object $object
+     * @param array $identifiers
+     *
+     * @return bool
+     */
+    private function objectHasIdentifiersGetters($object, array $identifiers)
+    {
+        foreach ($identifiers as $identifier) {
+            if (!method_exists($object, sprintf('get%s', ucfirst($identifier)))) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param object $object
+     * @param array $requestValue
+     * @param array $identifiers
+     *
+     * @return bool
+     */
+    private function objectIdentifiersMatchRequest($object, array $requestValue, array $identifiers)
+    {
+        foreach ($identifiers as $identifier) {
+            if ($object->{sprintf('get%s', ucfirst($identifier))}() != $requestValue[$identifier]) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

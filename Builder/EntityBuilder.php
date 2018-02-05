@@ -161,7 +161,7 @@ class EntityBuilder
             }
         }
         if (count($search) === count($identifiers)) {
-            $value = $repo->findBy($search);
+            $value = $repo->findOneBy($search);
             if (!$value) {
                 $value = new $targetClass();
             }

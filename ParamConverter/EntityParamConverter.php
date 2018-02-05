@@ -55,7 +55,7 @@ class EntityParamConverter implements ParamConverterInterface
         }
 
         if (count($search) === count($identifiers)) {
-            $entity = $this->entityManager->getRepository($configuration->getClass())->findBy($search);
+            $entity = $this->entityManager->getRepository($class)->findOneBy($search);
             if (!$entity) {
                 $entity = new $class();
             }

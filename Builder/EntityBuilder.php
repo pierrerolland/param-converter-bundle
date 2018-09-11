@@ -193,11 +193,11 @@ class EntityBuilder
         $isInverseSide,
         $mappedBy
     ) {
-        $entityValues = $this->removeItemsNotInRequest($entityValues, $requestValues);
+        $entityValues = $this->removeItemsNotInRequest($entityValues, $requestValues, $targetClass);
         $collection = is_array($entityValues) ? [] : new ArrayCollection();
 
-        $identifiers = is_array($entityValues) && count($entityValues) > 0 ?
-            $this->entityManager->getClassMetadata(current($entityValues))->getIdentifierFieldNames() : [];
+        $identifiers = $this->entityManager->getClassMetadata($targetClass)->getIdentifierFieldNames();
+
         foreach ($requestValues as $requestValue) {
             if ($entityValues && $this->requestValuesHaveIdentifiers($requestValues, $identifiers)) {
                 foreach ($entityValues as $entityValue) {
@@ -226,24 +226,13 @@ class EntityBuilder
     /**
      * @param array|Collection $entityValues
      * @param array $requestValues
+     * @param string $entityClass
      *
      * @return array|Collection
      */
-    private function removeItemsNotInRequest($entityValues, array $requestValues)
+    private function removeItemsNotInRequest($entityValues, array $requestValues, $entityClass)
     {
         if (!$entityValues || ($entityValues instanceof Collection && $entityValues->count() === 0)) {
-            return null;
-        }
-
-        if ($entityValues instanceof Collection) {
-            $entityClass = get_class($entityValues->first());
-        } elseif (is_array($entityValues)) {
-            $entityClass = get_class($entityValues[0]);
-        } else {
-            $entityClass = null;
-        }
-
-        if (!$entityClass) {
             return null;
         }
 

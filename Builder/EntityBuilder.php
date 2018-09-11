@@ -231,12 +231,17 @@ class EntityBuilder
      */
     private function removeItemsNotInRequest($entityValues, array $requestValues)
     {
-        if (!$entityValues) {
+        if (!$entityValues || ($entityValues instanceof Collection && $entityValues->count() === 0)) {
             return null;
         }
 
-        $entityClass = $entityValues instanceof Collection ? get_class($entityValues->current()) :
-            is_array($entityValues) ? get_class(current($entityValues)) : null;
+        if ($entityValues instanceof Collection) {
+            $entityClass = get_class($entityValues->first());
+        } elseif (is_array($entityValues)) {
+            $entityClass = get_class($entityValues[0]);
+        } else {
+            $entityClass = null;
+        }
 
         if (!$entityClass) {
             return null;

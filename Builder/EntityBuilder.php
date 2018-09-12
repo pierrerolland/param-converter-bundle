@@ -2,12 +2,12 @@
 
 namespace RollandRock\ParamConverterBundle\Builder;
 
-use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Psr\Log\LoggerInterface;
 use RollandRock\ParamConverterBundle\Finder\RequestFinder;
+use RollandRock\ParamConverterBundle\Utils\CollectionUtils;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\PropertyAccess\PropertyAccessor;
 
@@ -85,7 +85,7 @@ class EntityBuilder
             ) {
                 $fieldType = $metadata->getTypeOfField($fieldName);
                 if (in_array($fieldType, ['integer', 'float', 'boolean', 'string'])) {
-                    settype($value, $metadata->getTypeOfField($fieldName));
+                    settype($value, $fieldType);
                 } elseif (in_array($fieldType, ['date', 'datetime']) && is_string($value)) {
                     $value = new \DateTime($value);
                 }
@@ -182,7 +182,7 @@ class EntityBuilder
      * @param bool $isInverseSide
      * @param string $mappedBy
      *
-     * @return array|ArrayCollection
+     * @return array|Collection
      */
     private function mergeCollection(
         $entity,
@@ -194,22 +194,20 @@ class EntityBuilder
         $mappedBy
     ) {
         $entityValues = $this->removeItemsNotInRequest($entityValues, $requestValues, $targetClass);
-        $collection = is_array($entityValues) ? [] : new ArrayCollection();
-
         $identifiers = $this->entityManager->getClassMetadata($targetClass)->getIdentifierFieldNames();
 
         foreach ($requestValues as $requestValue) {
-            if ($entityValues && $this->requestValuesHaveIdentifiers($requestValues, $identifiers)) {
+            if (!CollectionUtils::isEmpty($entityValues) &&
+                $this->requestValueHasIdentifiers($requestValue, $identifiers)) {
                 foreach ($entityValues as $entityValue) {
-                    if ($this->objectHasIdentifiersGetters($entity, $identifiers)) {
-                        if ($this->objectIdentifiersMatchRequest($entityValue, $requestValue, $identifiers)) {
-                            $this->buildEntity($entityValue, $this->getNewRequest($requestValue), $fromClass);
-                            if ($isInverseSide && $mappedBy) {
-                                $this->propertyAccessor->setValue($entityValue, $mappedBy, $entity);
-                            }
-                            $collection[] = $entityValue;
-                            continue 2;
+                    if ($this->objectHasIdentifiersGetters($entity, $identifiers) &&
+                        $this->objectIdentifiersMatchRequest($entityValue, $requestValue, $identifiers)) {
+                        $this->buildEntity($entityValue, $this->getNewRequest($requestValue), $fromClass);
+                        if ($isInverseSide && $mappedBy) {
+                            $this->propertyAccessor->setValue($entityValue, $mappedBy, $entity);
                         }
+
+                        continue 2;
                     }
                 }
             }
@@ -217,10 +215,11 @@ class EntityBuilder
             if ($isInverseSide && $mappedBy) {
                 $this->propertyAccessor->setValue($entityValue, $mappedBy, $entity);
             }
-            $collection[] = $entityValue;
+
+            CollectionUtils::add($entityValues, $entityValue);
         }
 
-        return $collection;
+        return $entityValues;
     }
 
     /**
@@ -232,7 +231,7 @@ class EntityBuilder
      */
     private function removeItemsNotInRequest($entityValues, array $requestValues, $entityClass)
     {
-        if (!$entityValues || ($entityValues instanceof Collection && $entityValues->count() === 0)) {
+        if (CollectionUtils::isEmpty($entityValues)) {
             return null;
         }
 
@@ -244,18 +243,14 @@ class EntityBuilder
             }
             foreach ($requestValues as $requestValue) {
                 if (
-                    $this->requestValuesHaveIdentifiers($requestValue, $identifiers) &&
+                    $this->requestValueHasIdentifiers($requestValue, $identifiers) &&
                     $this->objectIdentifiersMatchRequest($entityValue, $requestValue, $identifiers)
                 ) {
                     continue 2;
                 }
             }
 
-            if (is_array($entityValues)) {
-                unset($entityValues[$id]);
-            } elseif ($entityValues instanceof Collection) {
-                $entityValues->remove($id);
-            }
+            CollectionUtils::remove($entityValues, $id);
         }
 
         return $entityValues;
@@ -272,15 +267,15 @@ class EntityBuilder
     }
 
     /**
-     * @param array $requestValues
+     * @param array $requestValue
      * @param array $identifiers
      *
      * @return bool
      */
-    private function requestValuesHaveIdentifiers(array $requestValues, array $identifiers)
+    private function requestValueHasIdentifiers(array $requestValue, array $identifiers)
     {
         foreach ($identifiers as $identifier) {
-            if (!isset($requestValues[$identifier])) {
+            if (!isset($requestValue[$identifier])) {
                 return false;
             }
         }

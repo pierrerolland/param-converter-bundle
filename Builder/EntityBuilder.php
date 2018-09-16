@@ -232,7 +232,7 @@ class EntityBuilder
     private function removeItemsNotInRequest($entityValues, array $requestValues, $entityClass)
     {
         if (CollectionUtils::isEmpty($entityValues)) {
-            return null;
+            return [];
         }
 
         $identifiers = $this->entityManager->getClassMetadata($entityClass)->getIdentifierFieldNames();

@@ -3,6 +3,7 @@
 namespace RollandRock\ParamConverterBundle\ParamConverter;
 
 use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\Mapping\ClassMetadata;
 use RollandRock\ParamConverterBundle\Builder\EntityBuilder;
 use RollandRock\ParamConverterBundle\Finder\RequestFinder;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
@@ -75,6 +76,14 @@ class EntityParamConverter implements ParamConverterInterface
     {
         $class = $configuration->getClass();
 
-        return class_exists($class) && $this->entityManager->getClassMetadata($class);
+        if (!class_exists($class)) {
+            return false;
+        }
+
+        try {
+            return $this->entityManager->getClassMetadata($class) instanceof ClassMetadata;
+        } catch (\Exception $e) {
+            return false;
+        }
     }
 }

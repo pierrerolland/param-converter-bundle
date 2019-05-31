@@ -13,6 +13,10 @@ class CollectionUtils
      */
     public static function isEmpty($collection)
     {
+        if (is_null($collection)) {
+            return true;
+        }
+
         if (is_array($collection)) {
             return count($collection) === 0;
         }

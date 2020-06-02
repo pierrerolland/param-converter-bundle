@@ -6,6 +6,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Psr\Log\LoggerInterface;
+use RollandRock\ParamConverterBundle\Exception\FieldNotFoundInRequestException;
 use RollandRock\ParamConverterBundle\Finder\RequestFinder;
 use RollandRock\ParamConverterBundle\Utils\CollectionUtils;
 use Symfony\Component\HttpFoundation\Request;
@@ -79,17 +80,23 @@ class EntityBuilder
     private function fillFields($entity, ClassMetadata $metadata, Request $request)
     {
         foreach ($metadata->getFieldNames() as $fieldName) {
-            if (
-                null !== ($value = $this->requestFinder->find($fieldName, $request)) &&
-                $this->propertyAccessor->isWritable($entity, $fieldName)
-            ) {
-                $fieldType = $metadata->getTypeOfField($fieldName);
-                if (in_array($fieldType, ['integer', 'float', 'boolean', 'string'])) {
-                    settype($value, $fieldType);
-                } elseif (in_array($fieldType, ['date', 'datetime']) && is_string($value)) {
-                    $value = new \DateTime($value);
+            try {
+                $value = $this->requestFinder->find($fieldName, $request);
+
+                if ($this->propertyAccessor->isWritable($entity, $fieldName)) {
+                    if (null !== $value) {
+                        $fieldType = $metadata->getTypeOfField($fieldName);
+
+                        if (in_array($fieldType, ['integer', 'float', 'boolean', 'string'])) {
+                            settype($value, $fieldType);
+                        } elseif (in_array($fieldType, ['date', 'datetime']) && is_string($value)) {
+                            $value = new \DateTime($value);
+                        }
+                    }
+                    $this->propertyAccessor->setValue($entity, $fieldName, $value);
                 }
-                $this->propertyAccessor->setValue($entity, $fieldName, $value);
+            } catch (FieldNotFoundInRequestException $e) {
+                // continue
             }
         }
     }
@@ -106,37 +113,46 @@ class EntityBuilder
     {
         foreach ($metadata->getAssociationNames() as $associationName) {
             $targetClass = $metadata->getAssociationTargetClass($associationName);
-            if (
-                null !== ($value = $this->requestFinder->find($associationName, $request)) &&
-                $this->propertyAccessor->isWritable($entity, $associationName) &&
-                $fromClass !== $targetClass
-            ) {
-                if ($metadata->isAssociationWithSingleJoinColumn($associationName)) {
-                    $this->propertyAccessor->setValue(
-                        $entity,
-                        $associationName,
-                        $this->retrieveAssociationValue(
-                            $fromClass,
-                            $targetClass,
-                            $value
-                        )
-                    );
-                } else {
-                    $mapping = $metadata->getAssociationMapping($associationName);
-                    $this->propertyAccessor->setValue(
-                        $entity,
-                        $associationName,
-                        $this->mergeCollection(
+
+            try {
+                $value = $this->requestFinder->find($associationName, $request);
+
+                if (
+                    $this->propertyAccessor->isWritable($entity, $associationName) &&
+                    $fromClass !== $targetClass &&
+                    null !== $value
+                ) {
+                    if ($metadata->isAssociationWithSingleJoinColumn($associationName)) {
+                        $this->propertyAccessor->setValue(
                             $entity,
-                            $fromClass,
-                            $targetClass,
-                            $this->propertyAccessor->getValue($entity, $associationName),
-                            $value,
-                            $metadata->isAssociationInverseSide($associationName),
-                            isset($mapping['mappedBy']) ? $mapping['mappedBy'] : null
-                        )
-                    );
+                            $associationName,
+                            $this->retrieveAssociationValue(
+                                $fromClass,
+                                $targetClass,
+                                $value
+                            )
+                        );
+                    } else {
+                        $mapping = $metadata->getAssociationMapping($associationName);
+                        $this->propertyAccessor->setValue(
+                            $entity,
+                            $associationName,
+                            $this->mergeCollection(
+                                $entity,
+                                $fromClass,
+                                $targetClass,
+                                $this->propertyAccessor->getValue($entity, $associationName),
+                                $value,
+                                $metadata->isAssociationInverseSide($associationName),
+                                isset($mapping['mappedBy']) ? $mapping['mappedBy'] : null
+                            )
+                        );
+                    }
+                } elseif (null === $value) {
+                    $this->propertyAccessor->setValue($entity, $associationName, null);
                 }
+            } catch (FieldNotFoundInRequestException $e) {
+                // continue
             }
         }
     }

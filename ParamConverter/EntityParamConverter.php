@@ -5,6 +5,7 @@ namespace RollandRock\ParamConverterBundle\ParamConverter;
 use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use RollandRock\ParamConverterBundle\Builder\EntityBuilder;
+use RollandRock\ParamConverterBundle\Exception\FieldNotFoundInRequestException;
 use RollandRock\ParamConverterBundle\Finder\RequestFinder;
 use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
 use Sensio\Bundle\FrameworkExtraBundle\Request\ParamConverter\ParamConverterInterface;
@@ -49,9 +50,13 @@ class EntityParamConverter implements ParamConverterInterface
 
         $search = [];
         foreach ($identifiers as $identifier) {
-            $value = $this->requestFinder->find($identifier, $request);
-            if ($value !== null) {
-                $search[$identifier] = $value;
+            try {
+                $value = $this->requestFinder->find($identifier, $request);
+                if ($value !== null) {
+                    $search[$identifier] = $value;
+                }
+            } catch (FieldNotFoundInRequestException $e) {
+                // continue
             }
         }
 

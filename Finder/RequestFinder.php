@@ -2,6 +2,7 @@
 
 namespace RollandRock\ParamConverterBundle\Finder;
 
+use RollandRock\ParamConverterBundle\Exception\FieldNotFoundInRequestException;
 use Symfony\Component\HttpFoundation\Request;
 
 class RequestFinder
@@ -18,12 +19,21 @@ class RequestFinder
             return $value;
         }
 
-        if (!($content = $request->getContent())) {
-            return null;
+        $content = $request->getContent();
+        if ($content) {
+            $content = json_decode($content, true);
+
+            if (!array_key_exists($key, $content)) {
+                throw new FieldNotFoundInRequestException();
+            }
+
+            return $content[$key];
         }
 
-        $content = json_decode($content, true);
+        if (!$request->request->has($key) && !$request->query->has($key) && !$request->files->has($key)) {
+            throw new FieldNotFoundInRequestException();
+        }
 
-        return array_key_exists($key, $content) ? $content[$key] : null;
+        return null;
     }
 }

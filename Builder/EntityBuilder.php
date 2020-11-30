@@ -7,6 +7,8 @@ use Doctrine\ORM\EntityManager;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Psr\Log\LoggerInterface;
 use RollandRock\ParamConverterBundle\Exception\FieldNotFoundInRequestException;
+use RollandRock\ParamConverterBundle\Exception\MappedSuperclassDiscriminatorNotFoundInInheritanceMapException;
+use RollandRock\ParamConverterBundle\Exception\MappedSuperclassDiscriminatorNotFoundInRequestException;
 use RollandRock\ParamConverterBundle\Finder\RequestFinder;
 use RollandRock\ParamConverterBundle\Utils\CollectionUtils;
 use Symfony\Component\HttpFoundation\Request;
@@ -61,6 +63,9 @@ class EntityBuilder
      * @param object $entity
      * @param Request $request
      * @param string $fromClass
+     *
+     * @throws MappedSuperclassDiscriminatorNotFoundInInheritanceMapException
+     * @throws MappedSuperclassDiscriminatorNotFoundInRequestException
      */
     public function buildEntity($entity, Request $request, $fromClass = '')
     {
@@ -108,6 +113,9 @@ class EntityBuilder
      * @param ClassMetadata $metadata
      * @param Request $request
      * @param string $fromClass
+     *
+     * @throws MappedSuperclassDiscriminatorNotFoundInRequestException
+     * @throws MappedSuperclassDiscriminatorNotFoundInInheritanceMapException
      */
     private function fillAssociations($entity, ClassMetadata $metadata, Request $request, $fromClass)
     {
@@ -163,6 +171,9 @@ class EntityBuilder
      * @param array $requestValues
      *
      * @return object
+     *
+     * @throws MappedSuperclassDiscriminatorNotFoundInInheritanceMapException
+     * @throws MappedSuperclassDiscriminatorNotFoundInRequestException
      */
     private function retrieveAssociationValue($fromClass, $targetClass, array $requestValues)
     {
@@ -179,10 +190,10 @@ class EntityBuilder
         if (count($search) === count($identifiers)) {
             $value = $repo->findOneBy($search);
             if (!$value) {
-                $value = new $targetClass();
+                $value = $this->createNewClass($targetClass, $requestValues);
             }
         } else {
-            $value = new $targetClass();
+            $value = $this->createNewClass($targetClass, $requestValues);
         }
         $this->buildEntity($value, $this->getNewRequest($requestValues), $fromClass);
 
@@ -308,7 +319,7 @@ class EntityBuilder
     private function objectHasIdentifiersGetters($object, array $identifiers)
     {
         foreach ($identifiers as $identifier) {
-            if (!method_exists($object, sprintf('get%s', ucfirst($identifier)))) {
+            if (!$this->propertyAccessor->isReadable($object, $identifier)) {
                 return false;
             }
         }
@@ -326,11 +337,39 @@ class EntityBuilder
     private function objectIdentifiersMatchRequest($object, array $requestValue, array $identifiers)
     {
         foreach ($identifiers as $identifier) {
-            if ($object->{sprintf('get%s', ucfirst($identifier))}() != $requestValue[$identifier]) {
+            if ($this->propertyAccessor->getValue($object, $identifier) != $requestValue[$identifier]) {
                 return false;
             }
         }
 
         return true;
+    }
+
+    /**
+     * @param string $targetClass
+     * @param array $requestValues
+     *
+     * @return object
+     *
+     * @throws MappedSuperclassDiscriminatorNotFoundInRequestException
+     * @throws MappedSuperclassDiscriminatorNotFoundInInheritanceMapException
+     */
+    private function createNewClass($targetClass, array $requestValues)
+    {
+        $targetClassMetadata = $this->entityManager->getClassMetadata($targetClass);
+
+        if ($targetClassMetadata->isInheritanceTypeNone()) {
+            return new $targetClass();
+        }
+
+        if (!array_key_exists($targetClassMetadata->discriminatorColumn['name'], $requestValues)) {
+            throw new MappedSuperclassDiscriminatorNotFoundInRequestException($targetClass, $targetClassMetadata->discriminatorColumn['name']);
+        }
+
+        if (!array_key_exists($requestValues[$targetClassMetadata->discriminatorColumn['name']], $targetClassMetadata->discriminatorMap)) {
+            throw new MappedSuperclassDiscriminatorNotFoundInInheritanceMapException($targetClass, $requestValues[$targetClassMetadata->discriminatorColumn['name']]);
+        }
+
+        return new $targetClassMetadata->discriminatorMap[$requestValues[$targetClassMetadata->discriminatorColumn['name']]]();
     }
 }

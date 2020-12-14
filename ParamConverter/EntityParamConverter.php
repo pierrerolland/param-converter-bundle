@@ -46,27 +46,12 @@ class EntityParamConverter implements ParamConverterInterface
     function apply(Request $request, ParamConverter $configuration)
     {
         $class = $configuration->getClass();
-        $identifiers = $this->entityManager->getClassMetadata($class)->getIdentifierFieldNames();
+        $options = $configuration->getOptions();
 
-        $search = [];
-        foreach ($identifiers as $identifier) {
-            try {
-                $value = $this->requestFinder->find($identifier, $request);
-                if ($value !== null) {
-                    $search[$identifier] = $value;
-                }
-            } catch (FieldNotFoundInRequestException $e) {
-                // continue
-            }
-        }
-
-        if (count($search) === count($identifiers)) {
-            $entity = $this->entityManager->getRepository($class)->findOneBy($search);
-            if (!$entity) {
-                $entity = new $class();
-            }
+        if (isset($options['properties'])) {
+            $entity = $this->retrieveEntity($class, $request, $options['properties']);
         } else {
-            $entity = new $class();
+            $entity = $this->retrieveFromIdentifiers($class, $request);
         }
 
         $this->builder->buildEntity($entity, $request);
@@ -90,5 +75,49 @@ class EntityParamConverter implements ParamConverterInterface
         } catch (\Exception $e) {
             return false;
         }
+    }
+
+    /**
+     * @param string $class
+     * @param Request $request
+     *
+     * @return object
+     */
+    private function retrieveFromIdentifiers($class, Request $request)
+    {
+        return $this->retrieveEntity($class, $request, $this->entityManager->getClassMetadata($class)->getIdentifierFieldNames());
+    }
+
+    /**
+     * @param string $class
+     * @param Request $request
+     * @param array $identifiers
+     *
+     * @return object
+     */
+    private function retrieveEntity($class, Request $request, array $identifiers)
+    {
+        $search = [];
+        foreach ($identifiers as $identifier) {
+            try {
+                $value = $this->requestFinder->find($identifier, $request);
+                if ($value !== null) {
+                    $search[$identifier] = $value;
+                }
+            } catch (FieldNotFoundInRequestException $e) {
+                // continue
+            }
+        }
+
+        if (count($search) === count($identifiers)) {
+            $entity = $this->entityManager->getRepository($class)->findOneBy($search);
+            if (!$entity) {
+                $entity = new $class();
+            }
+        } else {
+            $entity = new $class();
+        }
+
+        return $entity;
     }
 }

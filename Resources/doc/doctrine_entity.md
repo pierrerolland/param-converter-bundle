@@ -100,3 +100,38 @@ You will end up with these tables:
 |  1         | 3           |
 
 Exactly what had been defined inside your JSON object.
+
+### Retrieve an entity using other fields than the identifiers
+
+Use the `properties` option:
+
+```php
+<?php
+
+namespace App\Controller;
+
+use App\Entity\Article;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
+
+class ArticleController extends Controller
+{
+    /**
+     * @param Article $article
+     *
+     * @return Response
+     *
+     * @ParamConverter(
+     *     name="article",
+     *     class="App\Entity\Article",
+     *     converter="rollandrock_entity_converter",
+     *     options={properties:{"slug"}}
+     * )
+     */
+    public function postAction(Article $article)
+    {
+        $this->get('app.manager.article')->save($article);
+
+        return $this->handleResponse($article, Response::HTTP_CREATED);
+    }
+}
+```

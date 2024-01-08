@@ -1,6 +1,6 @@
 # param-converter-bundle
 
-This bundle aims to provide useful param converters. For now, it only provides a complete Doctrine entity param converter. See usage below.
+This bundle aims to provide useful request attributes. For now, it provides a complete Doctrine entity argument resolver. See usage below.
 
 ## Installation
 
@@ -57,4 +57,4 @@ class AppKernel extends Kernel
 
 ## Converters
 
-[1. Doctrine entity param converter](Resources/doc/doctrine_entity.md)
+[1. Doctrine entity value resolver](Resources/doc/doctrine_entity.md)

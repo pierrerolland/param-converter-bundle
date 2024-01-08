@@ -5,18 +5,17 @@ services:
             - "@doctrine.orm.entity_manager"
             - "@property_accessor"
             - "@rolland_rock_param_converter.finder.request"
-            - "@logger"
         public: false
 
     rolland_rock_param_converter.finder.request:
         class: RollandRock\ParamConverterBundle\Finder\RequestFinder
         public: false
 
-    rolland_rock_param_converter.param_converter.entity:
-        class: RollandRock\ParamConverterBundle\ParamConverter\EntityParamConverter
+    rolland_rock_param_converter.value_resolver.entity:
+        class: RollandRock\ParamConverterBundle\ValueResolver\EntityArgumentValueResolver
         arguments:
             - "@rolland_rock_param_converter.builder.entity"
             - "@doctrine.orm.entity_manager"
             - "@rolland_rock_param_converter.finder.request"
         tags:
-            - { name: request.param_converter, converter: rollandrock_entity_converter }
+            - { name: controller.argument_value_resolver, priority: 110 }

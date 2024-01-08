@@ -10,24 +10,13 @@ This param converter builds a full entity, and all its dependencies, based on an
 namespace App\Controller;
 
 use App\Entity\Article;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
+use RollandRock\ParamConverterBundle\Attribute\EntityArgument
 
 class ArticleController extends Controller
 {
-    /**
-     * @param Article $article
-     *
-     * @return Response
-     *
-     * @ParamConverter(
-     *     name="article",
-     *     class="App\Entity\Article",
-     *     converter="rollandrock_entity_converter"
-     * )
-     */
-    public function postAction(Article $article)
+    public function __invoke(#[EntityArgument] Article $article): Response
     {
-        $this->get('app.manager.article')->save($article);
+        // do something
 
         return $this->handleResponse($article, Response::HTTP_CREATED);
     }
@@ -111,25 +100,13 @@ Use the `properties` option:
 namespace App\Controller;
 
 use App\Entity\Article;
-use Sensio\Bundle\FrameworkExtraBundle\Configuration\ParamConverter;
+use RollandRock\ParamConverterBundle\Attribute\EntityArgument
 
 class ArticleController extends Controller
 {
-    /**
-     * @param Article $article
-     *
-     * @return Response
-     *
-     * @ParamConverter(
-     *     name="article",
-     *     class="App\Entity\Article",
-     *     converter="rollandrock_entity_converter",
-     *     options={properties:{"slug"}}
-     * )
-     */
-    public function postAction(Article $article)
+    public function __invoke(#[EntityArgument(properties: ['slug'])] Article $article): Response
     {
-        $this->get('app.manager.article')->save($article);
+        // do something
 
         return $this->handleResponse($article, Response::HTTP_CREATED);
     }

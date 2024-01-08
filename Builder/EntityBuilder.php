@@ -3,9 +3,8 @@
 namespace RollandRock\ParamConverterBundle\Builder;
 
 use Doctrine\Common\Collections\Collection;
-use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
-use Psr\Log\LoggerInterface;
 use RollandRock\ParamConverterBundle\Exception\FieldNotFoundInRequestException;
 use RollandRock\ParamConverterBundle\Exception\MappedSuperclassDiscriminatorNotFoundInInheritanceMapException;
 use RollandRock\ParamConverterBundle\Exception\MappedSuperclassDiscriminatorNotFoundInRequestException;
@@ -19,55 +18,20 @@ use Symfony\Component\PropertyAccess\PropertyAccessor;
  *
  * @author Pierre Rolland <roll.pierre@gmail.com>
  */
-class EntityBuilder
+readonly class EntityBuilder
 {
-    /**
-     * @var EntityManager
-     */
-    private $entityManager;
-
-    /**
-     * @var PropertyAccessor
-     */
-    private $propertyAccessor;
-
-    /**
-     * @var RequestFinder
-     */
-    private $requestFinder;
-
-    /**
-     * @var LoggerInterface
-     */
-    private $logger;
-
-    /**
-     * @param EntityManager $entityManager
-     * @param PropertyAccessor $propertyAccessor
-     * @param RequestFinder $requestFinder
-     * @param LoggerInterface $logger
-     */
     public function __construct(
-        EntityManager $entityManager,
-        PropertyAccessor $propertyAccessor,
-        RequestFinder $requestFinder,
-        LoggerInterface $logger
-    ) {
-        $this->entityManager = $entityManager;
-        $this->propertyAccessor = $propertyAccessor;
-        $this->requestFinder = $requestFinder;
-        $this->logger = $logger;
-    }
+        private EntityManagerInterface $entityManager,
+        private PropertyAccessor $propertyAccessor,
+        private RequestFinder $requestFinder,
+     ) {}
 
     /**
-     * @param object $entity
-     * @param Request $request
-     * @param string $fromClass
-     *
-     * @throws MappedSuperclassDiscriminatorNotFoundInInheritanceMapException
-     * @throws MappedSuperclassDiscriminatorNotFoundInRequestException
+     * @throws \Doctrine\ORM\Mapping\MappingException
+     * @throws \RollandRock\ParamConverterBundle\Exception\MappedSuperclassDiscriminatorNotFoundInInheritanceMapException
+     * @throws \RollandRock\ParamConverterBundle\Exception\MappedSuperclassDiscriminatorNotFoundInRequestException
      */
-    public function buildEntity($entity, Request $request, $fromClass = '')
+    public function buildEntity(object $entity, Request $request, string $fromClass = ''): void
     {
         $metadata = $this->entityManager->getClassMetadata(get_class($entity));
 
@@ -75,14 +39,7 @@ class EntityBuilder
         $this->fillAssociations($entity, $metadata, $request, $fromClass);
     }
 
-    /**
-     * Fills the $entity's column fields
-     *
-     * @param object $entity
-     * @param ClassMetadata $metadata
-     * @param Request $request
-     */
-    private function fillFields($entity, ClassMetadata $metadata, Request $request)
+    private function fillFields(object $entity, ClassMetadata $metadata, Request $request): void
     {
         foreach ($metadata->getFieldNames() as $fieldName) {
             try {
@@ -107,17 +64,11 @@ class EntityBuilder
     }
 
     /**
-     * Fills the $entity's association fields
-     *
-     * @param object $entity
-     * @param ClassMetadata $metadata
-     * @param Request $request
-     * @param string $fromClass
-     *
      * @throws MappedSuperclassDiscriminatorNotFoundInRequestException
      * @throws MappedSuperclassDiscriminatorNotFoundInInheritanceMapException
+     * @throws \Doctrine\ORM\Mapping\MappingException
      */
-    private function fillAssociations($entity, ClassMetadata $metadata, Request $request, $fromClass)
+    private function fillAssociations(object $entity, ClassMetadata $metadata, Request $request, string $fromClass): void
     {
         foreach ($metadata->getAssociationNames() as $associationName) {
             $targetClass = $metadata->getAssociationTargetClass($associationName);
@@ -166,16 +117,11 @@ class EntityBuilder
     }
 
     /**
-     * @param string $fromClass
-     * @param string $targetClass
-     * @param array $requestValues
-     *
-     * @return object
-     *
      * @throws MappedSuperclassDiscriminatorNotFoundInInheritanceMapException
      * @throws MappedSuperclassDiscriminatorNotFoundInRequestException
+     * @throws \Doctrine\ORM\Mapping\MappingException
      */
-    private function retrieveAssociationValue($fromClass, $targetClass, array $requestValues)
+    private function retrieveAssociationValue(string $fromClass, string $targetClass, array $requestValues): object
     {
         $repo = $this->entityManager->getRepository($targetClass);
         $targetClassMetadata = $this->entityManager->getClassMetadata($targetClass);
@@ -201,25 +147,19 @@ class EntityBuilder
     }
 
     /**
-     * @param object $entity
-     * @param string $fromClass
-     * @param string $targetClass
-     * @param array|Collection $entityValues
-     * @param array $requestValues
-     * @param bool $isInverseSide
-     * @param string $mappedBy
-     *
-     * @return array|Collection
+     * @throws \RollandRock\ParamConverterBundle\Exception\MappedSuperclassDiscriminatorNotFoundInInheritanceMapException
+     * @throws \Doctrine\ORM\Mapping\MappingException
+     * @throws \RollandRock\ParamConverterBundle\Exception\MappedSuperclassDiscriminatorNotFoundInRequestException
      */
     private function mergeCollection(
-        $entity,
-        $fromClass,
-        $targetClass,
-        $entityValues,
+        object $entity,
+        string $fromClass,
+        string $targetClass,
+        array | Collection $entityValues,
         array $requestValues,
-        $isInverseSide,
-        $mappedBy
-    ) {
+        bool $isInverseSide,
+        string $mappedBy
+    ): iterable {
         $entityValues = $this->removeItemsNotInRequest($entityValues, $requestValues, $targetClass);
         $identifiers = $this->entityManager->getClassMetadata($targetClass)->getIdentifierFieldNames();
 
@@ -249,14 +189,7 @@ class EntityBuilder
         return $entityValues;
     }
 
-    /**
-     * @param array|Collection $entityValues
-     * @param array $requestValues
-     * @param string $entityClass
-     *
-     * @return array|Collection
-     */
-    private function removeItemsNotInRequest($entityValues, array $requestValues, $entityClass)
+    private function removeItemsNotInRequest(array | Collection $entityValues, array $requestValues, string $entityClass): array | Collection
     {
         if (CollectionUtils::isEmpty($entityValues)) {
             return [];
@@ -266,7 +199,7 @@ class EntityBuilder
 
         foreach ($entityValues as $id => $entityValue) {
             if (!$this->objectHasIdentifiersGetters($entityValue, $identifiers)) {
-                return;
+                return [];
             }
             foreach ($requestValues as $requestValue) {
                 if (
@@ -283,23 +216,12 @@ class EntityBuilder
         return $entityValues;
     }
 
-    /**
-     * @param array $values
-     *
-     * @return Request
-     */
-    private function getNewRequest($values)
+    private function getNewRequest(array $values): Request
     {
         return new Request([], [], [], [], [], [], json_encode($values));
     }
 
-    /**
-     * @param array $requestValue
-     * @param array $identifiers
-     *
-     * @return bool
-     */
-    private function requestValueHasIdentifiers(array $requestValue, array $identifiers)
+    private function requestValueHasIdentifiers(array $requestValue, array $identifiers): bool
     {
         foreach ($identifiers as $identifier) {
             if (!isset($requestValue[$identifier])) {
@@ -310,13 +232,7 @@ class EntityBuilder
         return true;
     }
 
-    /**
-     * @param object $object
-     * @param array $identifiers
-     *
-     * @return bool
-     */
-    private function objectHasIdentifiersGetters($object, array $identifiers)
+    private function objectHasIdentifiersGetters(object $object, array $identifiers): bool
     {
         foreach ($identifiers as $identifier) {
             if (!$this->propertyAccessor->isReadable($object, $identifier)) {
@@ -327,14 +243,7 @@ class EntityBuilder
         return true;
     }
 
-    /**
-     * @param object $object
-     * @param array $requestValue
-     * @param array $identifiers
-     *
-     * @return bool
-     */
-    private function objectIdentifiersMatchRequest($object, array $requestValue, array $identifiers)
+    private function objectIdentifiersMatchRequest(object $object, array $requestValue, array $identifiers): bool
     {
         foreach ($identifiers as $identifier) {
             if ($this->propertyAccessor->getValue($object, $identifier) != $requestValue[$identifier]) {
@@ -346,15 +255,10 @@ class EntityBuilder
     }
 
     /**
-     * @param string $targetClass
-     * @param array $requestValues
-     *
-     * @return object
-     *
      * @throws MappedSuperclassDiscriminatorNotFoundInRequestException
      * @throws MappedSuperclassDiscriminatorNotFoundInInheritanceMapException
      */
-    private function createNewClass($targetClass, array $requestValues)
+    private function createNewClass(string $targetClass, array $requestValues): object
     {
         $targetClassMetadata = $this->entityManager->getClassMetadata($targetClass);
 

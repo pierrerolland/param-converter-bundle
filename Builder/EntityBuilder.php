@@ -158,7 +158,7 @@ readonly class EntityBuilder
         array | Collection $entityValues,
         array $requestValues,
         bool $isInverseSide,
-        string $mappedBy
+        ?string $mappedBy
     ): iterable {
         $entityValues = $this->removeItemsNotInRequest($entityValues, $requestValues, $targetClass);
         $identifiers = $this->entityManager->getClassMetadata($targetClass)->getIdentifierFieldNames();

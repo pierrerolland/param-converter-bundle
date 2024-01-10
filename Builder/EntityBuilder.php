@@ -5,6 +5,7 @@ namespace RollandRock\ParamConverterBundle\Builder;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\Mapping\ClassMetadata;
+use Doctrine\ORM\Mapping\ReflectionEnumProperty;
 use RollandRock\ParamConverterBundle\Exception\FieldNotFoundInRequestException;
 use RollandRock\ParamConverterBundle\Exception\MappedSuperclassDiscriminatorNotFoundInInheritanceMapException;
 use RollandRock\ParamConverterBundle\Exception\MappedSuperclassDiscriminatorNotFoundInRequestException;
@@ -49,7 +50,9 @@ readonly class EntityBuilder
                     if (null !== $value) {
                         $fieldType = $metadata->getTypeOfField($fieldName);
 
-                        if (in_array($fieldType, ['integer', 'float', 'boolean', 'string'])) {
+                        if (($reflected = $metadata->getReflectionProperty($fieldName)) instanceof ReflectionEnumProperty) {
+                            $value = $reflected->getType()->getName()::from($value);
+                        } elseif (in_array($fieldType, ['integer', 'float', 'boolean', 'string'])) {
                             settype($value, $fieldType);
                         } elseif (in_array($fieldType, ['date', 'datetime']) && is_string($value)) {
                             $value = new \DateTime($value);

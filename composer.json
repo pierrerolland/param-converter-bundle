@@ -1,7 +1,7 @@
 {
   "name": "rollandrock/param-converter-bundle",
   "type": "symfony-bundle",
-  "description": "This bundle aims to provide useful param converters",
+  "description": "This bundle aims to provide useful request attributes",
   "keywords": ["param", "converter", "symfony", "bundle", "entity"],
   "license": "MIT",
   "authors": [
@@ -12,9 +12,8 @@
   ],
   "require": {
     "php": ">=8.2",
-    "symfony/framework-bundle": "~5.4|~6.0|~7.0",
+    "symfony/framework-bundle": "~6.0|~7.0",
     "symfony/property-access": "*",
-    "sensio/framework-extra-bundle": "~5.4|~6.0|~7.0",
     "doctrine/orm": "*"
   },
   "autoload": {

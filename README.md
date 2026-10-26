@@ -2,6 +2,8 @@
 
 This bundle aims to provide useful request attributes. For now, it provides a complete Doctrine entity argument resolver. See usage below.
 
+Requires PHP 8.2 or later and Symfony 6.2+ (including 6.4 LTS) or Symfony 7.
+
 ## Installation
 
 
@@ -31,30 +33,24 @@ of the Composer documentation.
 
 #### Step 2: Enable the Bundle
 
-Then, enable the bundle by adding it to the list of registered bundles
-in the `app/AppKernel.php` file of your project:
+Then, enable the bundle in your project's `config/bundles.php` file:
 
 ```php
 <?php
-// app/AppKernel.php
-
-// ...
-class AppKernel extends Kernel
-{
-    public function registerBundles()
-    {
-        $bundles = array(
-            // ...
-            new RollandRock\ParamConverterBundle\RollandRockParamConverterBundle(),
-        );
-
-        // ...
-    }
-
+// config/bundles.php
+return [
     // ...
-}
+    RollandRock\ParamConverterBundle\RollandRockParamConverterBundle::class => ['all' => true],
+];
 ```
 
 ## Converters
 
 [1. Doctrine entity value resolver](Resources/doc/doctrine_entity.md)
+
+## Tests
+
+```console
+composer install
+composer test
+```

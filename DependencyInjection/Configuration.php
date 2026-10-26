@@ -15,15 +15,8 @@ class Configuration implements ConfigurationInterface
     /**
      * {@inheritdoc}
      */
-    public function getConfigTreeBuilder()
+    public function getConfigTreeBuilder(): TreeBuilder
     {
-        $treeBuilder = method_exists(TreeBuilder::class, 'root') ? new TreeBuilder() : new TreeBuilder('rolland_rock_param_converter');
-        $rootNode = method_exists(TreeBuilder::class, 'root') ? $treeBuilder->root('rolland_rock_param_converter') : $treeBuilder->getRootNode();
-
-        // Here you should define the parameters that are allowed to
-        // configure your bundle. See the documentation linked above for
-        // more information on that topic.
-
-        return $treeBuilder;
+        return new TreeBuilder('rolland_rock_param_converter');
     }
 }

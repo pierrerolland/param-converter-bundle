@@ -12,11 +12,11 @@ use RollandRock\ParamConverterBundle\Exception\MappedSuperclassDiscriminatorNotF
 use RollandRock\ParamConverterBundle\Exception\MappedSuperclassDiscriminatorNotFoundInRequestException;
 use RollandRock\ParamConverterBundle\Finder\RequestFinder;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\HttpKernel\Controller\ArgumentValueResolverInterface;
+use Symfony\Component\HttpKernel\Controller\ValueResolverInterface;
 use Symfony\Component\HttpKernel\ControllerMetadata\ArgumentMetadata;
 use Symfony\Component\HttpKernel\Exception\BadRequestHttpException;
 
-readonly class EntityArgumentValueResolver implements ArgumentValueResolverInterface
+readonly class EntityArgumentValueResolver implements ValueResolverInterface
 {
     public function __construct(
         private EntityBuilder $builder,
@@ -26,6 +26,10 @@ readonly class EntityArgumentValueResolver implements ArgumentValueResolverInter
 
     public function resolve(Request $request, ArgumentMetadata $argument): iterable
     {
+        if (!$this->supports($request, $argument)) {
+            return;
+        }
+
         $attribute = $argument->getAttributes(EntityArgument::class)[0];
         $class = $argument->getType();
         $properties = $attribute->properties;
@@ -47,7 +51,7 @@ readonly class EntityArgumentValueResolver implements ArgumentValueResolverInter
 
     public function supports(Request $request, ArgumentMetadata $argument): bool
     {
-        if (count($argument->getAttributes(EntityArgument::class)) === 0) {
+        if ($argument->getType() === null || count($argument->getAttributes(EntityArgument::class)) === 0) {
             return false;
         }
 

@@ -12,9 +12,14 @@
   ],
   "require": {
     "php": ">=8.2",
-    "symfony/framework-bundle": "~6.0|~7.0",
-    "symfony/property-access": "*",
+    "symfony/framework-bundle": "^6.2 || ^7.0",
+    "symfony/http-kernel": "^6.2 || ^7.0",
+    "symfony/property-access": "^6.2 || ^7.0",
+    "symfony/yaml": "^6.2 || ^7.0",
     "doctrine/orm": "*"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^10.5"
   },
   "autoload": {
     "psr-4": { "RollandRock\\ParamConverterBundle\\": "" },
@@ -24,5 +29,8 @@
   },
   "autoload-dev": {
     "psr-4": { "RollandRock\\ParamConverterBundle\\Tests\\": "Tests" }
+  },
+  "scripts": {
+    "test": "phpunit"
   }
 }

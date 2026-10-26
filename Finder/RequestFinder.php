@@ -15,15 +15,17 @@ class RequestFinder
      */
     public function find($key, Request $request)
     {
-        if ($value = $request->get($key)) {
-            return $value;
+        foreach ([$request->attributes, $request->query, $request->request] as $parameters) {
+            if ($parameters->has($key)) {
+                return $parameters->all()[$key];
+            }
         }
 
         $content = $request->getContent();
         if ($content) {
             $content = json_decode($content, true);
 
-            if (!array_key_exists($key, $content)) {
+            if (!is_array($content) || !array_key_exists($key, $content)) {
                 throw new FieldNotFoundInRequestException();
             }
 

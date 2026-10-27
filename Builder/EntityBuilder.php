@@ -158,7 +158,7 @@ readonly class EntityBuilder
         object $entity,
         string $fromClass,
         string $targetClass,
-        array | Collection $entityValues,
+        array | Collection | null $entityValues,
         array $requestValues,
         bool $isInverseSide,
         ?string $mappedBy
@@ -192,7 +192,7 @@ readonly class EntityBuilder
         return $entityValues;
     }
 
-    private function removeItemsNotInRequest(array | Collection $entityValues, array $requestValues, string $entityClass): array | Collection
+    private function removeItemsNotInRequest(array | Collection | null $entityValues, array $requestValues, string $entityClass): array | Collection
     {
         if (CollectionUtils::isEmpty($entityValues)) {
             return [];
